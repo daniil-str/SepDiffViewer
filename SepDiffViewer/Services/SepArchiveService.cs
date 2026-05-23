@@ -1,65 +1,72 @@
-﻿using HtmlAgilityPack;
-//using SepDiffTool.Models;
+﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Linq;
-using SepDiffViewer.Models;
+using HtmlAgilityPack;
+using SepDiffTool.Models;
 
 namespace SepDiffTool.Services;
 
-public class SepArchiveService(HttpClient client)
+public class SepArchiveService : IDisposable
 {
-    public async Task<List<SepVersion>> GetArchiveVersionsAsync(string slug, CancellationToken ct = default)
+    private readonly HttpClient _client;
+
+    public SepArchiveService()
     {
-        var url = $"https://plato.stanford.edu/entries/{slug}/";
-        var html = await client.GetStringAsync(url, ct);
-        return ParseArchiveVersions(html, slug);
+        // TODO 2: Инициализируй HttpClient (гл. 6).
+        // Добавь заголовок User-Agent, иначе SEP может вернуть 403 Forbidden.
+        // Пример: _client.DefaultRequestHeaders.Add("User-Agent", "SepDiffTool/1.0");
     }
 
-    private static List<SepVersion> ParseArchiveVersions(string html, string slug)
+    public void Dispose()
     {
-        var doc = new HtmlDocument();
-        doc.LoadHtml(html);
+        // TODO 3: Реализуй IDisposable (гл. 6).
+        // Освободи ресурсы HttpClient через _client.Dispose();
+    }
+
+    public string DownloadHtml(string url)
+    {
+        // TODO 4: Синхронно скачай HTML по URL (гл. 6–8).
+        // Используй chain: _client.GetAsync(url).Result.Content.ReadAsStringAsync().Result
+        // ⚠️ В продакшене так не делают (блокирует поток), но для учебной цели
+        // до изучения async/await (гл. 12+) это допустимо.
+        throw new NotImplementedException("Реализуй скачивание HTML");
+    }
+
+    public List<SepVersion> GetArchiveVersions(string slug)
+    {
+        // TODO 5: Собери URL главной страницы статьи: https://plato.stanford.edu/entries/{slug}/
+        // Скачай HTML, вызови приватный метод парсинга и верни список.
+        throw new NotImplementedException("Реализуй получение списка версий");
+    }
+
+    private List<SepVersion> ParseArchiveVersions(string html, string slug)
+    {
         var versions = new List<SepVersion>();
+        var doc = new HtmlDocument(); // Внешняя библиотека
+        doc.LoadHtml(html);
 
-        var links = doc.DocumentNode.SelectNodes(
-            "//a[contains(@href, '/archives/') and contains(@href, '/entries/')]");
-        if (links != null)
-        {
-            foreach (var link in links)
-            {
-                var href = link.GetAttributeValue("href", "").Trim();
-                if (!href.StartsWith("http"))
-                    href = "https://plato.stanford.edu" + href;
-
-                if (href.Contains($"/entries/{slug}/", StringComparison.OrdinalIgnoreCase))
-                {
-                    var match = Regex.Match(href, @"/archives/([^/]+)/");
-                    if (match.Success)
-                    {
-                        versions.Add(new SepVersion(FormatArchiveName(match.Groups[1].Value), href.TrimEnd('/')));
-                    }
-                }
-            }
-        }
-
+        // TODO 6: Найди все ссылки на архивы (HtmlAgilityPack API).
+        // XPath: "//a[contains(@href, '/archives/') and contains(@href, '/entries/')]"
+        // Пройдись циклом foreach по найденным узлам.
+        // Для каждого узла извлеки href,补齐 до абсолютного URL, отфильтруй по slug.
+        // Извлек период из URL через Regex: @"/archives/([^/]+)/"
+        // Преобразуй "fall2023" → "Fall 2023" (используй switch-выражение + паттерны, гл. 3–4).
+        // Добавляй в список новые SepVersion(...).
+        
         versions.Add(new SepVersion("Current (Live)", $"https://plato.stanford.edu/entries/{slug}"));
-        return versions.OrderBy(v => v.Url.Contains("/archives/")).ToList();
+
+        // TODO 7: Отсортируй список. Архивные версии должны идти первыми, Current — последним.
+        // Используй versions.Sort((a, b) => ...) + лямбды (гл. 6).
+        
+        return versions;
     }
 
     private static string FormatArchiveName(string period)
     {
-        var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            {"win", "Winter"}, {"spr", "Spring"}, {"sum", "Summer"}, {"fall", "Fall"},
-            {"winter", "Winter"}, {"spring", "Spring"}, {"summer", "Summer"}, {"autumn", "Fall"}
-        };
-
-        var match = Regex.Match(period, @"^(\w+)(\d{4})$");
-        return match.Success && dict.TryGetValue(match.Groups[1].Value, out var season) 
-            ? $"{season} {match.Groups[2].Value}" 
-            : period;
+        // TODO 8: Преформатируй "win2023" → "Winter 2023" и т.д.
+        // Используй switch-выражение с when-guard (гл. 3–4).
+        // Для года используй range-индексы: period[^4..] (гл. 3).
+        throw new NotImplementedException("Реализуй форматирование имени архива");
     }
 }
